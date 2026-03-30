@@ -13,6 +13,9 @@ export class MainScene extends Phaser.Scene {
   private inactivityTimer: Phaser.Time.TimerEvent | null = null;
   private bgMusic!: Phaser.Sound.BaseSound;
 
+  // BANDERA DE CONTROL: false = Tiro por Clic/Tap, true = Tiro por Swipe (Deslizar)
+  private useSwipe: boolean = false;
+
   private score: number = 0;
   private attempts: number = 0;
   private maxAttempts: number = 5;
@@ -145,13 +148,20 @@ export class MainScene extends Phaser.Scene {
       this.resetInactivityTimer(); // Reiniciar inactividad en cada toque
       if (!this.isGameStarted || this.isKicking) return;
       this.tweens.killTweensOf(this.ball); // Detener la animación de retorno si la tocan rápidamente de nuevo
-      this.swipePoints = [new Phaser.Math.Vector2(pointer.x, pointer.y)];
-      this.swipeStartTime = this.time.now; // Guardamos el momento exacto del toque
+
+      if (this.useSwipe) {
+        this.swipePoints = [new Phaser.Math.Vector2(pointer.x, pointer.y)];
+        this.swipeStartTime = this.time.now; // Guardamos el momento exacto del toque
+      } else {
+        // Tiro por clic directo
+        this.kickBallToPoint(pointer.x, pointer.y);
+      }
     });
 
     // Rastrear la trayectoria del dedo para calcular la curva
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
       this.resetInactivityTimer(); // Reiniciar inactividad al mover el dedo
+      if (!this.useSwipe) return; // Bloquear si la bandera de swipe no está activa
       if (
         !this.isGameStarted ||
         this.isKicking ||
@@ -186,6 +196,7 @@ export class MainScene extends Phaser.Scene {
 
     // Detectar tanto el levantar el dedo (pointerup) como salir de la pantalla (pointerout)
     const handleSwipe = (pointer: Phaser.Input.Pointer) => {
+      if (!this.useSwipe) return; // Bloquear si la bandera de swipe no está activa
       if (!this.isGameStarted) return;
       if (this.isKicking || this.swipePoints.length < 2) {
         cancelSwipe();
@@ -243,7 +254,7 @@ export class MainScene extends Phaser.Scene {
 
     modalDiv.innerHTML = `
       <h1 style="color: #fff; font-size: 70px; margin: 0 0 20px 0; text-align: center; width: 100%;">¡CÓMO JUGAR!</h1>
-      <p style="color: #fff; font-size: 45px; text-align: center; margin: 15px 0;">Desliza tu dedo hacia el objetivo para patear.</p>
+      <p style="color: #fff; font-size: 45px; text-align: center; margin: 15px 0;">${this.useSwipe ? "Desliza tu dedo hacia el objetivo para patear." : "Toca el punto en la portería donde quieres patear."}</p>
       <div style="display: flex; flex-direction: column; gap: 35px; margin: 40px 0; width: 100%;">
         <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 40px;">
           <img src="/assets/100-puntos.png" alt="100 puntos" style="width: 250px; object-fit: contain;" />
@@ -423,6 +434,72 @@ export class MainScene extends Phaser.Scene {
       scaleX: 0.08, // Escala drásticamente menor para asegurar que sea más pequeño que el objetivo en su fase mínima
       scaleY: 0.08,
       angle: `+=${spinAngle}`, // Suma las vueltas partiendo del ángulo con el que el jugador lo soltó
+      duration: duration,
+      ease: "Sine.easeOut",
+    });
+  }
+
+  // NUEVA FUNCIÓN: Tiro por Clic/Tap con Chanfle (Curva)
+  private kickBallToPoint(targetX: number, targetY: number) {
+    this.isKicking = true;
+    this.attempts++;
+    this.updateAttemptsDisplay();
+
+    // Congelar el objetivo al patear
+    this.tweens.getTweensOf(this.target).forEach((t) => t.pause());
+    this.targetScaleEvent.paused = true;
+
+    // Limitar para que el balón no se vaya volando fuera de los bordes laterales
+    const finalTargetX = Phaser.Math.Clamp(targetX, 100, 980);
+
+    // Aseguramos que el balón avance por lo menos hasta la red (Y=800) para que cruce la línea de gol
+    // Si el usuario da clic más al fondo de la red (ej. Y=400), respetamos ese valor.
+    const finalTargetY = Math.min(targetY, 800);
+
+    // Cálculo del Chanfle (Efecto de Curva)
+    const screenCenterX = 1080 / 2;
+    const offsetFromCenter = finalTargetX - screenCenterX;
+
+    // Ajustamos el punto de control de Bezier para crear la curva "jalando" el punto intermedio hacia afuera
+    // Multiplicamos por 0.8 para hacer la curva bastante pronunciada y visible
+    const controlPointX =
+      this.ball.x + (finalTargetX - this.ball.x) * 0.5 + offsetFromCenter * 0.8;
+    const controlPointY = this.ball.y + (finalTargetY - this.ball.y) * 0.5;
+
+    const curve = new Phaser.Curves.QuadraticBezier(
+      new Phaser.Math.Vector2(this.ball.x, this.ball.y),
+      new Phaser.Math.Vector2(controlPointX, controlPointY),
+      new Phaser.Math.Vector2(finalTargetX, finalTargetY),
+    );
+
+    // Dirección del giro del balón (hacia donde se patea)
+    const spinDirection = offsetFromCenter < 0 ? -1 : 1;
+    const duration = 1200; // Tiempo de vuelo fijo para una buena sensación de disparo
+
+    const pathAnim = { t: 0 };
+    this.trajectoryTween = this.tweens.add({
+      targets: pathAnim,
+      t: 1,
+      duration: duration,
+      ease: "Sine.easeOut",
+      onUpdate: () => {
+        const point = curve.getPoint(pathAnim.t);
+        this.ball.setPosition(point.x, point.y);
+      },
+      onComplete: () => {
+        // Si termina el viaje y no chocó con el objetivo, es un fallo
+        if (this.isKicking && !this.isResolving) {
+          this.handleMiss();
+        }
+      },
+    });
+
+    const spinAngle = 1080 * spinDirection;
+    this.tweens.add({
+      targets: this.ball,
+      scaleX: 0.08,
+      scaleY: 0.08,
+      angle: `+=${spinAngle}`,
       duration: duration,
       ease: "Sine.easeOut",
     });
