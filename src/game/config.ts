@@ -17,6 +17,9 @@ export const getGameConfig = (
       debug: false,
     },
   },
+  dom: {
+    createContainer: true,
+  },
   scene: [MainScene],
   scale: {
     mode: Phaser.Scale.FIT,

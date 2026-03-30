@@ -1,31 +1,23 @@
 import React, { useState } from "react";
 import StartScreen from "./screens/StartScreen";
 import GameScreen from "./screens/GameScreen";
-import ResultScreen from "./screens/ResultScreen";
 
-type ScreenState = "start" | "game" | "result";
+type ScreenState = "start" | "game";
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenState>("start");
-  const [finalScore, setFinalScore] = useState<number>(0);
 
   const handleStart = () => setCurrentScreen("game");
 
-  const handleGameOver = (score: number) => {
-    setFinalScore(score);
-    setCurrentScreen("result");
+  const handleGameOver = () => {
+    setCurrentScreen("start"); // Redirigir directamente al inicio
   };
-
-  const handleRestart = () => setCurrentScreen("start");
 
   return (
     <div style={containerStyles}>
       <div style={totemStyles}>
         {currentScreen === "start" && <StartScreen onStart={handleStart} />}
         {currentScreen === "game" && <GameScreen onGameOver={handleGameOver} />}
-        {currentScreen === "result" && (
-          <ResultScreen score={finalScore} onRestart={handleRestart} />
-        )}
       </div>
     </div>
   );
