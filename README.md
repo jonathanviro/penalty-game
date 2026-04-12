@@ -1,6 +1,6 @@
 # ⚽ Penalty Challenge
 
-Juego interactivo 2D de simulación de tiros penales diseñado específicamente para ejecutarse en un **tótem interactivo vertical** con una resolución de **1080x1920**.
+Juego interactivo 2D de simulación de tiro penal diseñado para ejecutarse en **pantalla horizontal** con una resolución de **896x640**.
 
 El proyecto combina la potencia de **React** para el manejo de interfaces y flujos de pantallas, con el motor de físicas y renderizado **Phaser 3** para las mecánicas del juego.
 
@@ -69,7 +69,7 @@ Para inicializar el servidor de desarrollo en caliente (HMR), corre el siguiente
 pnpm run dev
 ```
 
-Se habilitará en un entorno local (generalmente `http://localhost:5173/`). Recomendamos utilizar la vista de "Modo de dispositivo" en las herramientas de desarrollador del navegador y establecer una resolución personalizada de **1080 x 1920** para emular el Tótem real.
+Se habilitará en un entorno local (generalmente `http://localhost:5173/`). Recomendamos utilizar la vista de "Modo de dispositivo" en las herramientas de desarrollador del navegador y establecer una resolución personalizada de **896 x 640** para emular la pantalla real.
 
 ### 5. Modo Producción
 

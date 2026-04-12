@@ -34,8 +34,8 @@ const containerStyles: React.CSSProperties = {
 };
 
 const totemStyles: React.CSSProperties = {
-  width: "1080px",
-  height: "1920px",
+  width: "896px",
+  height: "640px",
   position: "relative",
   backgroundColor: "#111",
 };

@@ -7,8 +7,8 @@ export const getGameConfig = (
 ): Phaser.Types.Core.GameConfig => ({
   type: Phaser.AUTO,
   parent,
-  width: 1080,
-  height: 1920,
+  width: 896,
+  height: 640,
   transparent: true,
   physics: {
     default: "arcade",
